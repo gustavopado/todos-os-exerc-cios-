@@ -1,0 +1,131 @@
+html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jogo de Corrida Frontal</title>
+<style>
+body { margin: 0; background: #222; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; color: #fff; font-family: Arial, sans-serif; }
+canvas { background: linear-gradient(#555, #222); display: block; border: 2px solid #fff; }
+#hud { margin-top: 10px; font-size: 18px; }
+</style>
+</head>
+<body>
+<canvas id="game" width="400" height="600"></canvas>
+<div id="hud">⏱ Tempo: 0s | 🏆 Recorde: 0s</div>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const hud = document.getElementById('hud');
+const W = canvas.width;
+const H = canvas.height;
+
+
+let player = { x: W/2 - 15, y: H - 80, w: 30, h: 50, speed: 5 };
+let cars = [];
+let roadWidth = 250;
+let laneWidth = roadWidth / 3;
+let keys = {};
+let time = 0;
+let bestTime = 0;
+let lastUpdate = performance.now();
+
+
+function spawnCar(){
+let lane = Math.floor(Math.random()*3);
+cars.push({ x: W/2 - roadWidth/2 + lane*laneWidth + laneWidth/2 - 20, y: -60, w: 40, h: 70, speed: 4 + Math.random()*2, color: ['red','blue','yellow','purple'][Math.floor(Math.random()*4)] });
+}
+
+
+function resetGame(){
+player.x = W/2 - 15;
+cars = [];
+time = 0;
+lastUpdate = performance.now();
+}
+
+
+function update(){
+const now = performance.now();
+const delta = (now - lastUpdate) / 1000;
+lastUpdate = now;
+time += delta;
+
+
+if(keys['ArrowLeft']) player.x -= player.speed;
+if(keys['ArrowRight']) player.x += player.speed;
+player.x = Math.max(W/2 - roadWidth/2, Math.min(player.x, W/2 + roadWidth/2 - player.w));
+
+
+cars.forEach(c => c.y += c.speed);
+cars = cars.filter(c => c.y < H + 70);
+if(Math.random() < 0.03) spawnCar();
+
+
+for(let c of cars){
+if(c.x < player.x + player.w && c.x + c.w > player.x && c.y < player.y + player.h && c.y + c.h > player.y){
+if(time > bestTime) bestTime = time;
+resetGame();
+break;
+}
+}
+
+
+hud.textContent = `⏱ Tempo: ${time.toFixed(1)}s | 🏆 Recorde: ${bestTime.toFixed(1)}s`;
+}
+
+
+function drawRoad(){
+ctx.fillStyle = '#333';
+ctx.beginPath();
+ctx.moveTo(W/2 - roadWidth/2, 0);
+ctx.lineTo(W/2 + roadWidth/2, 0);
+ctx.lineTo(W/2 + roadWidth/2, H);
+ctx.lineTo(W/2 - roadWidth/2, H);
+ctx.closePath();
+ctx.fill();
+
+
+ctx.strokeStyle = '#fff';
+ctx.setLineDash([20, 20]);
+ctx.beginPath();
+ctx.moveTo(W/2, 0);
+ctx.lineTo(W/2, H);
+ctx.stroke();
+ctx.setLineDash([]);
+}
+
+
+function drawCar(x, y, w, h, color){
+ctx.fillStyle = color;
+ctx.fillRect(x, y, w, h);
+ctx.fillStyle = '#fff';
+ctx.fillRect(x + w*0.2, y + 5, w*0.6, 8);
+ctx.fillRect(x + w*0.2, y + h - 13, w*0.6, 8);
+ctx.fillStyle = '#000';
+ctx.fillRect(x + 4, y + 15, w-8, h-30);
+}
+
+
+function draw(){
+ctx.clearRect(0,0,W,H);
+drawRoad();
+drawCar(player.x, player.y, player.w, player.h, 'lime');
+cars.forEach(c => drawCar(c.x, c.y, c.w, c.h, c.color));
+}
+
+
+function loop(){
+update();
+draw();
+requestAnimationFrame(loop);
+}
+
+
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+
+loop();
+</script>
+</body>
+</html>
